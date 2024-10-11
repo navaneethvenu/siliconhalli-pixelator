@@ -7,6 +7,7 @@ import {
   RefreshCcw,
   ChevronDown,
   ChevronUp,
+  Clipboard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -43,9 +44,31 @@ const PixelArtGenerator: React.FC = () => {
     const storedColors = localStorage.getItem("colors");
     return storedColors ? JSON.parse(storedColors) : [...defaultColors];
   });
+
+  const [weights, setWeights] = useState<{ [color: string]: number }>(() => {
+    const storedWeights = localStorage.getItem("colorWeights");
+    return storedWeights ? JSON.parse(storedWeights) : {};
+  });
+
+  // NEW: Color weights state
+  const [colorWeights, setColorWeights] = useState<{ [color: string]: number }>(
+    () => {
+      if (Object.keys(weights).length > 0) {
+        return weights; // Use stored weights if available
+      }
+
+      // Default behavior if no storedWeights found
+      const newWeights: { [color: string]: number } = {};
+      defaultColors.forEach((color) => (newWeights[color] = 1)); // Default weight is 1 for all colors
+      return newWeights;
+    }
+  );
+
   const [colorSwaps, setColorSwaps] = useState<
     { original: string; newColor: string }[]
   >([]);
+  const [applyColorSwap, setApplyColorSwap] = useState<boolean>(true);
+
   const [showColorSwap, setShowColorSwap] = useState<boolean>(false); // For toggleable accordion
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -53,6 +76,128 @@ const PixelArtGenerator: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
+    const drawPixelArt = () => {
+      const canvas = canvasRef.current;
+      const previewCanvas = previewCanvasRef.current;
+
+      if (!canvas || !previewCanvas || !image) return;
+
+      const ctx = canvas.getContext("2d");
+      const previewCtx = previewCanvas.getContext("2d");
+
+      if (!ctx || !previewCtx) return;
+
+      canvas.width = artboardWidth;
+      canvas.height = artboardHeight;
+      previewCanvas.width = artboardWidth;
+      previewCanvas.height = artboardHeight;
+
+      const scale = Math.min(
+        artboardWidth / image.width,
+        artboardHeight / image.height
+      );
+      const x = (artboardWidth - image.width * scale) / 2;
+      const y = (artboardHeight - image.height * scale) / 2;
+      previewCtx.drawImage(
+        image,
+        x,
+        y,
+        image.width * scale,
+        image.height * scale
+      );
+
+      ctx.imageSmoothingEnabled = false;
+      const scaledWidth = artboardWidth / pixelSize;
+      const scaledHeight = artboardHeight / pixelSize;
+      ctx.drawImage(previewCanvas, 0, 0, scaledWidth, scaledHeight);
+      ctx.drawImage(
+        canvas,
+        0,
+        0,
+        scaledWidth,
+        scaledHeight,
+        0,
+        0,
+        artboardWidth,
+        artboardHeight
+      );
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+      if (colorMode) {
+        for (let i = 0; i < imageData.data.length; i += 4) {
+          const closestColor = findClosestWeightedColor(
+            imageData.data[i],
+            imageData.data[i + 1],
+            imageData.data[i + 2]
+          );
+          const [r, g, b] = hexToRgb(closestColor);
+          imageData.data[i] = r;
+          imageData.data[i + 1] = g;
+          imageData.data[i + 2] = b;
+        }
+      }
+
+      if (applyColorSwap) {
+        applyColorSwaps(imageData);
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+    };
+
+    const applyColorSwaps = (imageData: ImageData) => {
+      for (let i = 0; i < imageData.data.length; i += 4) {
+        const pixelColor = rgbToHex(
+          imageData.data[i],
+          imageData.data[i + 1],
+          imageData.data[i + 2]
+        );
+
+        const swap = colorSwaps.find((swap) => swap.original === pixelColor);
+        if (swap) {
+          const [r, g, b] = hexToRgb(swap.newColor);
+          imageData.data[i] = r;
+          imageData.data[i + 1] = g;
+          imageData.data[i + 2] = b;
+        }
+      }
+    };
+
+    // NEW: Adjust color selection based on weights
+    const findClosestWeightedColor = (
+      r: number,
+      g: number,
+      b: number
+    ): string => {
+      return colors.reduce(
+        (closest, color) => {
+          const [cr, cg, cb] = hexToRgb(color);
+          const distance = Math.sqrt(
+            (cr - r) ** 2 + (cg - g) ** 2 + (cb - b) ** 2
+          );
+          const weight = colorWeights[color] || 1; // Use weight
+          const adjustedDistance = distance / weight; // Adjust distance by weight
+          return adjustedDistance < closest.adjustedDistance
+            ? { color, adjustedDistance }
+            : closest;
+        },
+        { color: colors[0], adjustedDistance: Infinity }
+      ).color;
+    };
+
+    // const findClosestColor = (r: number, g: number, b: number): string => {
+    //   return colors.reduce(
+    //     (closest, color) => {
+    //       const [cr, cg, cb] = hexToRgb(color);
+    //       const distance = Math.sqrt(
+    //         (cr - r) ** 2 + (cg - g) ** 2 + (cb - b) ** 2
+    //       );
+    //       return distance < closest.distance ? { color, distance } : closest;
+    //     },
+    //     { color: colors[0], distance: Infinity }
+    //   ).color;
+    // };
+
     if (image) {
       drawPixelArt();
     }
@@ -64,11 +209,14 @@ const PixelArtGenerator: React.FC = () => {
     colorMode,
     colors,
     colorSwaps,
+    applyColorSwap,
+    colorWeights,
   ]);
 
   useEffect(() => {
     localStorage.setItem("colors", JSON.stringify(colors));
-  }, [colors]);
+    localStorage.setItem("colorWeights", JSON.stringify(colorWeights));
+  }, [colors, colorWeights]);
 
   const handleImageUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -85,103 +233,6 @@ const PixelArtGenerator: React.FC = () => {
     }
   };
 
-  const drawPixelArt = () => {
-    const canvas = canvasRef.current;
-    const previewCanvas = previewCanvasRef.current;
-
-    if (!canvas || !previewCanvas || !image) return;
-
-    const ctx = canvas.getContext("2d");
-    const previewCtx = previewCanvas.getContext("2d");
-
-    if (!ctx || !previewCtx) return;
-
-    canvas.width = artboardWidth;
-    canvas.height = artboardHeight;
-    previewCanvas.width = artboardWidth;
-    previewCanvas.height = artboardHeight;
-
-    const scale = Math.min(
-      artboardWidth / image.width,
-      artboardHeight / image.height
-    );
-    const x = (artboardWidth - image.width * scale) / 2;
-    const y = (artboardHeight - image.height * scale) / 2;
-    previewCtx.drawImage(
-      image,
-      x,
-      y,
-      image.width * scale,
-      image.height * scale
-    );
-
-    ctx.imageSmoothingEnabled = false;
-    const scaledWidth = artboardWidth / pixelSize;
-    const scaledHeight = artboardHeight / pixelSize;
-    ctx.drawImage(previewCanvas, 0, 0, scaledWidth, scaledHeight);
-    ctx.drawImage(
-      canvas,
-      0,
-      0,
-      scaledWidth,
-      scaledHeight,
-      0,
-      0,
-      artboardWidth,
-      artboardHeight
-    );
-
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-    if (colorMode) {
-      for (let i = 0; i < imageData.data.length; i += 4) {
-        const closestColor = findClosestColor(
-          imageData.data[i],
-          imageData.data[i + 1],
-          imageData.data[i + 2]
-        );
-        const [r, g, b] = hexToRgb(closestColor);
-        imageData.data[i] = r;
-        imageData.data[i + 1] = g;
-        imageData.data[i + 2] = b;
-      }
-    }
-
-    applyColorSwaps(imageData);
-    ctx.putImageData(imageData, 0, 0);
-  };
-
-  const applyColorSwaps = (imageData: ImageData) => {
-    for (let i = 0; i < imageData.data.length; i += 4) {
-      const pixelColor = rgbToHex(
-        imageData.data[i],
-        imageData.data[i + 1],
-        imageData.data[i + 2]
-      );
-
-      const swap = colorSwaps.find((swap) => swap.original === pixelColor);
-      if (swap) {
-        const [r, g, b] = hexToRgb(swap.newColor);
-        imageData.data[i] = r;
-        imageData.data[i + 1] = g;
-        imageData.data[i + 2] = b;
-      }
-    }
-  };
-
-  const findClosestColor = (r: number, g: number, b: number): string => {
-    return colors.reduce(
-      (closest, color) => {
-        const [cr, cg, cb] = hexToRgb(color);
-        const distance = Math.sqrt(
-          (cr - r) ** 2 + (cg - g) ** 2 + (cb - b) ** 2
-        );
-        return distance < closest.distance ? { color, distance } : closest;
-      },
-      { color: colors[0], distance: Infinity }
-    ).color;
-  };
-
   const hexToRgb = (hex: string): [number, number, number] => {
     const bigint = parseInt(hex.slice(1), 16);
     return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
@@ -189,6 +240,17 @@ const PixelArtGenerator: React.FC = () => {
 
   const rgbToHex = (r: number, g: number, b: number): string => {
     return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+  };
+
+  const handleColorWeightChange = (color: string, weight: number) => {
+    setColorWeights((prevWeights) => ({
+      ...prevWeights,
+      [color]: weight,
+    }));
+    setWeights((prevWeights) => ({
+      ...prevWeights,
+      [color]: weight,
+    }));
   };
 
   const exportImage = (format: "png" | "gif") => {
@@ -199,6 +261,19 @@ const PixelArtGenerator: React.FC = () => {
     link.download = `pixel-art.${format}`;
     link.href = dataUrl;
     link.click();
+  };
+
+  const copyToClipboard = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const item = new ClipboardItem({ "image/png": blob });
+        navigator.clipboard.write([item]).then(() => {
+          alert("Image copied to clipboard!");
+        });
+      }
+    });
   };
 
   const triggerFileInput = () => {
@@ -226,6 +301,7 @@ const PixelArtGenerator: React.FC = () => {
 
   const clearColorsFromMemory = () => {
     localStorage.removeItem("colors");
+    localStorage.removeItem("colorWeights");
     resetToDefaultColors();
   };
 
@@ -234,6 +310,11 @@ const PixelArtGenerator: React.FC = () => {
       ...colorSwaps,
       { original: colors[0], newColor: colors[0] },
     ]);
+  };
+
+  const deleteColorSwap = (index: number) => {
+    const updatedSwaps = colorSwaps.filter((_, i) => i !== index);
+    setColorSwaps(updatedSwaps);
   };
 
   const handleColorSwapChange = (
@@ -319,6 +400,17 @@ const PixelArtGenerator: React.FC = () => {
                   className="h-8 w-8 rounded"
                   style={{ backgroundColor: color }}
                 />
+                <Slider
+                  value={[colorWeights[color] || 1]}
+                  onValueChange={(value) =>
+                    handleColorWeightChange(color, value[0])
+                  }
+                  min={0}
+                  max={10}
+                  step={0.1}
+                  className="w-64"
+                />
+                {colorWeights[color] || 1}
                 <Button
                   variant="destructive"
                   onClick={() => deleteColor(index)}
@@ -353,6 +445,13 @@ const PixelArtGenerator: React.FC = () => {
 
       {showColorSwap && (
         <div className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <span>Apply Color Swaps:</span>
+            <Switch
+              checked={applyColorSwap}
+              onCheckedChange={setApplyColorSwap}
+            />
+          </div>
           {colorSwaps.map((swap, index) => (
             <div key={index} className="flex items-center space-x-2">
               <Select
@@ -426,8 +525,15 @@ const PixelArtGenerator: React.FC = () => {
                   ))}
                 </SelectContent>
               </Select>
+              <Button
+                variant="destructive"
+                onClick={() => deleteColorSwap(index)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           ))}
+
           <Button onClick={addColorSwap}>
             <Plus className="mr-2 h-4 w-4" /> Add Color Swap
           </Button>
@@ -451,6 +557,9 @@ const PixelArtGenerator: React.FC = () => {
         </Button>
         <Button onClick={() => exportImage("gif")} disabled={!image}>
           <Download className="mr-2 h-4 w-4" /> Export GIF
+        </Button>
+        <Button onClick={copyToClipboard} disabled={!image}>
+          <Clipboard className="mr-2 h-4 w-4" /> Copy to Clipboard
         </Button>
       </div>
     </div>
