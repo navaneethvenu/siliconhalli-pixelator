@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useRef, useEffect, ChangeEvent } from "react";
 import {
   Upload,
@@ -87,11 +89,17 @@ const PixelArtGenerator: React.FC = () => {
 
       if (!ctx || !previewCtx) return;
 
+      // Set dimensions for both canvases
       canvas.width = artboardWidth;
       canvas.height = artboardHeight;
       previewCanvas.width = artboardWidth;
       previewCanvas.height = artboardHeight;
 
+      // Clear both canvases
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+      // Draw original image on preview canvas
       const scale = Math.min(
         artboardWidth / image.width,
         artboardHeight / image.height
@@ -106,12 +114,23 @@ const PixelArtGenerator: React.FC = () => {
         image.height * scale
       );
 
+      // Create pixelated version on main canvas
       ctx.imageSmoothingEnabled = false;
-      const scaledWidth = artboardWidth / pixelSize;
-      const scaledHeight = artboardHeight / pixelSize;
-      ctx.drawImage(previewCanvas, 0, 0, scaledWidth, scaledHeight);
+      const scaledWidth = Math.floor(artboardWidth / pixelSize);
+      const scaledHeight = Math.floor(artboardHeight / pixelSize);
+
+      // Use an offscreen canvas for the intermediate step
+      const offscreenCanvas = document.createElement("canvas");
+      offscreenCanvas.width = scaledWidth;
+      offscreenCanvas.height = scaledHeight;
+      const offscreenCtx = offscreenCanvas.getContext("2d");
+
+      // Draw scaled down version to offscreen canvas
+      offscreenCtx.drawImage(previewCanvas, 0, 0, scaledWidth, scaledHeight);
+
+      // Draw from offscreen canvas back to main canvas, scaled up
       ctx.drawImage(
-        canvas,
+        offscreenCanvas,
         0,
         0,
         scaledWidth,
@@ -122,6 +141,7 @@ const PixelArtGenerator: React.FC = () => {
         artboardHeight
       );
 
+      // Apply color mode and color swaps if necessary
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
       if (colorMode) {
@@ -138,7 +158,7 @@ const PixelArtGenerator: React.FC = () => {
         }
       }
 
-      if (applyColorSwap) {
+      if (applyColorSwap && colorSwaps.length > 0) {
         applyColorSwaps(imageData);
       }
 
@@ -153,12 +173,17 @@ const PixelArtGenerator: React.FC = () => {
           imageData.data[i + 2]
         );
 
-        const swap = colorSwaps.find((swap) => swap.original === pixelColor);
-        if (swap) {
-          const [r, g, b] = hexToRgb(swap.newColor);
-          imageData.data[i] = r;
-          imageData.data[i + 1] = g;
-          imageData.data[i + 2] = b;
+        // Only log if needed, or on specific conditions
+        if (colorSwaps.length > 0) {
+          const swap = colorSwaps.find((swap) => swap.original === pixelColor);
+          if (swap) {
+            const [r, g, b] = hexToRgb(swap.newColor);
+            // Perform the swap without logging every pixel
+            console.log("hello", pixelColor);
+            imageData.data[i] = r;
+            imageData.data[i + 1] = g;
+            imageData.data[i + 2] = b;
+          }
         }
       }
     };
@@ -184,19 +209,6 @@ const PixelArtGenerator: React.FC = () => {
         { color: colors[0], adjustedDistance: Infinity }
       ).color;
     };
-
-    // const findClosestColor = (r: number, g: number, b: number): string => {
-    //   return colors.reduce(
-    //     (closest, color) => {
-    //       const [cr, cg, cb] = hexToRgb(color);
-    //       const distance = Math.sqrt(
-    //         (cr - r) ** 2 + (cg - g) ** 2 + (cb - b) ** 2
-    //       );
-    //       return distance < closest.distance ? { color, distance } : closest;
-    //     },
-    //     { color: colors[0], distance: Infinity }
-    //   ).color;
-    // };
 
     if (image) {
       drawPixelArt();
