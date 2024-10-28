@@ -263,6 +263,11 @@ const PixelArtGenerator: React.FC = () => {
         const r = imageData.data[index];
         const g = imageData.data[index + 1];
         const b = imageData.data[index + 2];
+        const a = imageData.data[index + 3]; // Alpha value
+
+        // Skip creating <rect> if the pixel is transparent
+        if (a === 0) continue;
+
         const hexColor = colorMode
           ? findNearestColor(r, g, b, colors)
           : rgbToHex(r, g, b);
@@ -272,8 +277,9 @@ const PixelArtGenerator: React.FC = () => {
       }
     }
 
-    svg += "</svg>";
-    console.log(svg);
+    // Close the SVG tag
+    svg += `</svg>`;
+
     return svg;
   };
 
