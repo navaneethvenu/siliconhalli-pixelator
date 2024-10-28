@@ -380,7 +380,7 @@ const PixelArtGenerator: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col p-4 w-screen items-center">
+    <div className="flex flex-col p-4 w-screen items-center max-w-4xl m-auto">
       <header className="flex justify-between items-center w-full pb-4">
         <h1>Silicon Halli Pixelator</h1>
         <div>
@@ -397,14 +397,24 @@ const PixelArtGenerator: React.FC = () => {
         </div>
       </header>
 
-      <div className="flex space-x-4 justify-center gap-4 border border-slate-100 bg-slate-50 p-8 flex-grow flex-wrap">
+      <div className="flex space-x-4 justify-center gap-4 border border-slate-100 bg-slate-50 p-2 flex-grow w-full flex-wrap">
         <div>
           <h3 className="text-center mb-2">Original Image</h3>
-          <canvas ref={previewCanvasRef} className="border border-gray-300" />
+          <canvas
+            ref={previewCanvasRef}
+            className={`border border-gray-300 w-${artboardWidth} h-${artboardHeight}`}
+            width={artboardWidth}
+            height={artboardHeight}
+          />
         </div>
         <div>
           <h3 className="text-center mb-2">Pixelated Image</h3>
-          <canvas ref={canvasRef} className="border border-gray-300" />
+          <canvas
+            ref={canvasRef}
+            className={`border border-gray-300 w-${artboardWidth} h-${artboardHeight}`}
+            width={artboardWidth}
+            height={artboardHeight}
+          />
         </div>
       </div>
       <div className="flex justify-center p-4 gap-2 flex-wrap">
