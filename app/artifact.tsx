@@ -22,10 +22,6 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 
-// interface ColorWeights {
-//   [color: string]: number;
-// }
-
 const defaultColors: string[] = [
   "#F53698",
   "#F0D105",
@@ -36,6 +32,15 @@ const defaultColors: string[] = [
   "#0479C3",
 ];
 
+export const isBrowser = (): boolean => {
+  return typeof window !== "undefined";
+};
+
+export const nextLocalStorage = (): Storage | void => {
+  if (isBrowser()) {
+    return window.localStorage;
+  }
+};
 const PixelArtGenerator: React.FC = () => {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [pixelSize, setPixelSize] = useState<number>(10);
@@ -43,12 +48,12 @@ const PixelArtGenerator: React.FC = () => {
   const [artboardHeight, setArtboardHeight] = useState<number>(400);
   const [colorMode, setColorMode] = useState<boolean>(false);
   const [colors, setColors] = useState<string[]>(() => {
-    const storedColors = localStorage.getItem("colors");
+    const storedColors = nextLocalStorage()?.getItem("colors");
     return storedColors ? JSON.parse(storedColors) : [...defaultColors];
   });
 
   const [weights, setWeights] = useState<{ [color: string]: number }>(() => {
-    const storedWeights = localStorage.getItem("colorWeights");
+    const storedWeights = nextLocalStorage()?.getItem("colorWeights");
     return storedWeights ? JSON.parse(storedWeights) : {};
   });
 
@@ -226,8 +231,8 @@ const PixelArtGenerator: React.FC = () => {
   ]);
 
   useEffect(() => {
-    localStorage.setItem("colors", JSON.stringify(colors));
-    localStorage.setItem("colorWeights", JSON.stringify(colorWeights));
+    nextLocalStorage()?.setItem("colors", JSON.stringify(colors));
+    nextLocalStorage()?.setItem("colorWeights", JSON.stringify(colorWeights));
   }, [colors, colorWeights]);
 
   const handleImageUpload = (event: ChangeEvent<HTMLInputElement>) => {
@@ -387,8 +392,8 @@ const PixelArtGenerator: React.FC = () => {
   };
 
   const clearColorsFromMemory = () => {
-    localStorage.removeItem("colors");
-    localStorage.removeItem("colorWeights");
+    nextLocalStorage()?.removeItem("colors");
+    nextLocalStorage()?.removeItem("colorWeights");
     resetToDefaultColors();
   };
 
