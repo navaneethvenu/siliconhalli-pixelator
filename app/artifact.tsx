@@ -126,7 +126,7 @@ const PixelArtGenerator: React.FC = () => {
       const offscreenCtx = offscreenCanvas.getContext("2d");
 
       // Draw scaled down version to offscreen canvas
-      offscreenCtx.drawImage(previewCanvas, 0, 0, scaledWidth, scaledHeight);
+      offscreenCtx?.drawImage(previewCanvas, 0, 0, scaledWidth, scaledHeight);
 
       // Draw from offscreen canvas back to main canvas, scaled up
       ctx.drawImage(
@@ -275,6 +275,81 @@ const PixelArtGenerator: React.FC = () => {
     link.click();
   };
 
+  // Function to create an SVG from the pixel data on the canvas
+  const createSvgFromCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    const { width, height } = canvas;
+    const imageData = ctx.getImageData(0, 0, width, height);
+
+    // Start SVG string with appropriate dimensions
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">`;
+
+    for (let y = 0; y < height; y += pixelSize) {
+      for (let x = 0; x < width; x += pixelSize) {
+        const index = (y * width + x) * 4;
+        const r = imageData.data[index];
+        const g = imageData.data[index + 1];
+        const b = imageData.data[index + 2];
+        const hexColor = colorMode
+          ? findNearestColor(r, g, b, colors)
+          : rgbToHex(r, g, b);
+
+        // Add each "pixel" as an SVG <rect> element
+        svg += `<rect x="${x}" y="${y}" width="${pixelSize}" height="${pixelSize}" fill="${hexColor}" />`;
+      }
+    }
+
+    svg += "</svg>";
+    console.log(svg);
+    return svg;
+  };
+
+  // Convert the SVG string into a Blob and copy to clipboard as SVG
+  // const copySvgToClipboard = async () => {
+  //   alert("hello");
+  //   const svgString = createSvgFromCanvas();
+  //   if (!svgString) return;
+
+  //   try {
+  //     // 1. Create a Blob from the SVG string
+  //     const svgBlob = new Blob([svgString], { type: "image/svg+xml" });
+
+  //     // 2. Use Clipboard API if available
+  //     if (navigator.clipboard && navigator.clipboard.write) {
+  //       await navigator.clipboard
+  //         .write([
+  //           new ClipboardItem({
+  //             "image/svg+xml": svgBlob,
+  //             "text/plain": svgString,
+  //           }),
+  //         ])
+  //         .then(() => alert("SVG copied to clipboard"));
+  //       console.log("SVG copied to clipboard as an image!");
+  //     } else {
+  //       throw new Error("Clipboard API not supported on this browser.");
+  //     }
+  //   } catch (error) {
+  //     console.error("Failed to copy SVG to clipboard:", error);
+  //   }
+  // };
+
+  const copySvgTextToClipboard = async () => {
+    const svgString = createSvgFromCanvas();
+    if (!svgString) return;
+
+    try {
+      await navigator.clipboard.writeText(svgString);
+      alert("SVG copied to clipboard as text!");
+    } catch (error) {
+      console.error("Failed to copy SVG text:", error);
+    }
+  };
+
   const copyToClipboard = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -322,6 +397,32 @@ const PixelArtGenerator: React.FC = () => {
       ...colorSwaps,
       { original: colors[0], newColor: colors[0] },
     ]);
+  };
+
+  // Helper function to find the nearest color from a given set of colors
+  const findNearestColor = (
+    r: number,
+    g: number,
+    b: number,
+    colorPalette: string[]
+  ) => {
+    let closestColor = colorPalette[0];
+    let smallestDistance = Infinity;
+
+    for (const hexColor of colorPalette) {
+      const colorInt = parseInt(hexColor.slice(1), 16);
+      const pr = (colorInt >> 16) & 0xff;
+      const pg = (colorInt >> 8) & 0xff;
+      const pb = colorInt & 0xff;
+
+      const distance = Math.sqrt((pr - r) ** 2 + (pg - g) ** 2 + (pb - b) ** 2);
+
+      if (distance < smallestDistance) {
+        smallestDistance = distance;
+        closestColor = hexColor;
+      }
+    }
+    return closestColor;
   };
 
   const deleteColorSwap = (index: number) => {
@@ -572,6 +673,9 @@ const PixelArtGenerator: React.FC = () => {
         </Button>
         <Button onClick={copyToClipboard} disabled={!image}>
           <Clipboard className="mr-2 h-4 w-4" /> Copy to Clipboard
+        </Button>
+        <Button onClick={copySvgTextToClipboard} disabled={!image}>
+          <Clipboard className="mr-2 h-4 w-4" /> Copy SVG to Clipboard
         </Button>
       </div>
     </div>
