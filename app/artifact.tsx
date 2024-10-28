@@ -7,20 +7,12 @@ import {
   Trash2,
   Plus,
   RefreshCcw,
-  ChevronDown,
-  ChevronUp,
   Clipboard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
 
 const defaultColors: string[] = [
   "#F53698",
@@ -69,14 +61,7 @@ const PixelArtGenerator: React.FC = () => {
       defaultColors.forEach((color) => (newWeights[color] = 1)); // Default weight is 1 for all colors
       return newWeights;
     }
-  );
-
-  const [colorSwaps, setColorSwaps] = useState<
-    { original: string; newColor: string }[]
-  >([]);
-  const [applyColorSwap, setApplyColorSwap] = useState<boolean>(true);
-
-  const [showColorSwap, setShowColorSwap] = useState<boolean>(false); // For toggleable accordion
+  ); // For toggleable accordion
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -163,34 +148,7 @@ const PixelArtGenerator: React.FC = () => {
         }
       }
 
-      if (applyColorSwap && colorSwaps.length > 0) {
-        applyColorSwaps(imageData);
-      }
-
       ctx.putImageData(imageData, 0, 0);
-    };
-
-    const applyColorSwaps = (imageData: ImageData) => {
-      for (let i = 0; i < imageData.data.length; i += 4) {
-        const pixelColor = rgbToHex(
-          imageData.data[i],
-          imageData.data[i + 1],
-          imageData.data[i + 2]
-        );
-
-        // Only log if needed, or on specific conditions
-        if (colorSwaps.length > 0) {
-          const swap = colorSwaps.find((swap) => swap.original === pixelColor);
-          if (swap) {
-            const [r, g, b] = hexToRgb(swap.newColor);
-            // Perform the swap without logging every pixel
-            console.log("hello", pixelColor);
-            imageData.data[i] = r;
-            imageData.data[i + 1] = g;
-            imageData.data[i + 2] = b;
-          }
-        }
-      }
     };
 
     // NEW: Adjust color selection based on weights
@@ -225,8 +183,6 @@ const PixelArtGenerator: React.FC = () => {
     artboardHeight,
     colorMode,
     colors,
-    colorSwaps,
-    applyColorSwap,
     colorWeights,
   ]);
 
@@ -397,13 +353,6 @@ const PixelArtGenerator: React.FC = () => {
     resetToDefaultColors();
   };
 
-  const addColorSwap = () => {
-    setColorSwaps([
-      ...colorSwaps,
-      { original: colors[0], newColor: colors[0] },
-    ]);
-  };
-
   // Helper function to find the nearest color from a given set of colors
   const findNearestColor = (
     r: number,
@@ -428,21 +377,6 @@ const PixelArtGenerator: React.FC = () => {
       }
     }
     return closestColor;
-  };
-
-  const deleteColorSwap = (index: number) => {
-    const updatedSwaps = colorSwaps.filter((_, i) => i !== index);
-    setColorSwaps(updatedSwaps);
-  };
-
-  const handleColorSwapChange = (
-    index: number,
-    key: "original" | "newColor",
-    newColor: string
-  ) => {
-    const updatedSwaps = [...colorSwaps];
-    updatedSwaps[index][key] = newColor;
-    setColorSwaps(updatedSwaps);
   };
 
   return (
@@ -543,117 +477,6 @@ const PixelArtGenerator: React.FC = () => {
           </Button>
           <Button onClick={clearColorsFromMemory}>
             <Trash2 className="mr-2 h-4 w-4" /> Clear Colors
-          </Button>
-        </div>
-      )}
-
-      <div className="flex items-center justify-between mt-4">
-        <h3>Color Swap Options:</h3>
-        <Button
-          variant="ghost"
-          onClick={() => setShowColorSwap(!showColorSwap)}
-        >
-          {showColorSwap ? (
-            <ChevronUp className="h-4 w-4" />
-          ) : (
-            <ChevronDown className="h-4 w-4" />
-          )}
-        </Button>
-      </div>
-
-      {showColorSwap && (
-        <div className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <span>Apply Color Swaps:</span>
-            <Switch
-              checked={applyColorSwap}
-              onCheckedChange={setApplyColorSwap}
-            />
-          </div>
-          {colorSwaps.map((swap, index) => (
-            <div key={index} className="flex items-center space-x-2">
-              <Select
-                value={swap.original}
-                onValueChange={(value: string) =>
-                  handleColorSwapChange(index, "original", value)
-                }
-              >
-                <SelectTrigger className="w-32">
-                  <span>
-                    <div
-                      style={{
-                        backgroundColor: swap.original,
-                        width: "16px",
-                        height: "16px",
-                        borderRadius: "4px",
-                      }}
-                    ></div>
-                    {swap.original}
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  {colors.map((color) => (
-                    <SelectItem key={color} value={color}>
-                      <div
-                        style={{
-                          backgroundColor: color,
-                          width: "16px",
-                          height: "16px",
-                          borderRadius: "4px",
-                        }}
-                      ></div>
-                      {color}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <span>→</span>
-              <Select
-                value={swap.newColor}
-                onValueChange={(value: string) =>
-                  handleColorSwapChange(index, "newColor", value)
-                }
-              >
-                <SelectTrigger className="w-32">
-                  <span>
-                    <div
-                      style={{
-                        backgroundColor: swap.newColor,
-                        width: "16px",
-                        height: "16px",
-                        borderRadius: "4px",
-                      }}
-                    ></div>
-                    {swap.newColor}
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  {colors.map((color) => (
-                    <SelectItem key={color} value={color}>
-                      <div
-                        style={{
-                          backgroundColor: color,
-                          width: "16px",
-                          height: "16px",
-                          borderRadius: "4px",
-                        }}
-                      ></div>
-                      {color}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                variant="destructive"
-                onClick={() => deleteColorSwap(index)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
-
-          <Button onClick={addColorSwap}>
-            <Plus className="mr-2 h-4 w-4" /> Add Color Swap
           </Button>
         </div>
       )}
