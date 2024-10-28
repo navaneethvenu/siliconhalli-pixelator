@@ -380,8 +380,9 @@ const PixelArtGenerator: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col space-y-4 p-4 max-w-4xl mx-auto">
-      <div className="flex justify-between items-center">
+    <div className="flex flex-col p-4 w-screen items-center">
+      <header className="flex justify-between items-center w-full pb-4">
+        <h1>Silicon Halli Pixelator</h1>
         <div>
           <input
             type="file"
@@ -394,44 +395,72 @@ const PixelArtGenerator: React.FC = () => {
             <Upload className="mr-2 h-4 w-4" /> Upload Image
           </Button>
         </div>
-        <div className="flex space-x-2">
-          <Input
-            type="number"
-            value={artboardWidth}
-            onChange={(e) => setArtboardWidth(Number(e.target.value))}
-            className="w-20"
-            min="100"
-            max="1000"
+      </header>
+
+      <div className="flex space-x-4 justify-center gap-4 border border-slate-100 bg-slate-50 p-8 flex-grow flex-wrap">
+        <div>
+          <h3 className="text-center mb-2">Original Image</h3>
+          <canvas ref={previewCanvasRef} className="border border-gray-300" />
+        </div>
+        <div>
+          <h3 className="text-center mb-2">Pixelated Image</h3>
+          <canvas ref={canvasRef} className="border border-gray-300" />
+        </div>
+      </div>
+      <div className="flex justify-center p-4 gap-2 flex-wrap">
+        <Button onClick={() => exportImage("png")} disabled={!image}>
+          <Download className="mr-2 h-4 w-4" /> Export PNG
+        </Button>
+        <Button onClick={copyToClipboard} disabled={!image}>
+          <Clipboard className="mr-2 h-4 w-4" /> Copy to Clipboard
+        </Button>
+        <Button onClick={copySvgTextToClipboard} disabled={!image}>
+          <Clipboard className="mr-2 h-4 w-4" /> Copy SVG to Clipboard
+        </Button>
+      </div>
+      <div className="flex justify-between items-center gap-2 sm:flex-row flex-col w-full">
+        <div className="flex flex-col gap-2 w-full border border-slate-100 bg-slate-50 p-8 rounded-lg">
+          <span>Pixel Size:</span>
+          <Slider
+            value={[pixelSize]}
+            onValueChange={(value) => setPixelSize(value[0])}
+            min={1}
+            max={50}
+            step={1}
           />
-          <span>x</span>
-          <Input
-            type="number"
-            value={artboardHeight}
-            onChange={(e) => setArtboardHeight(Number(e.target.value))}
-            className="w-20"
-            min="100"
-            max="1000"
-          />
+          <div className="flex justify-between items-center gap-8">
+            <span>{pixelSize}</span>
+            <span>50</span>
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 border border-slate-100 bg-slate-50 p-8 rounded-lg sm:w-auto w-full">
+          <span>Canvas Dimensions:</span>
+          <div className="flex space-x-2">
+            <Input
+              type="number"
+              value={artboardWidth}
+              onChange={(e) => setArtboardWidth(Number(e.target.value))}
+              className="w-20"
+              min="100"
+              max="1000"
+            />
+            <span>x</span>
+            <Input
+              type="number"
+              value={artboardHeight}
+              onChange={(e) => setArtboardHeight(Number(e.target.value))}
+              className="w-20"
+              min="100"
+              max="1000"
+            />
+          </div>
         </div>
       </div>
 
-      <div className="flex items-center space-x-2">
-        <span>Pixel Size:</span>
-        <Slider
-          value={[pixelSize]}
-          onValueChange={(value) => setPixelSize(value[0])}
-          min={1}
-          max={50}
-          step={1}
-        />
-        <span>{pixelSize}</span>
-      </div>
-
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center p-4">
         <span>Color Mode:</span>
         <Switch checked={colorMode} onCheckedChange={setColorMode} />
       </div>
-
       {colorMode && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -480,32 +509,6 @@ const PixelArtGenerator: React.FC = () => {
           </Button>
         </div>
       )}
-
-      <div className="flex space-x-4 justify-center mt-4">
-        <div>
-          <h3 className="text-center mb-2">Original Image</h3>
-          <canvas ref={previewCanvasRef} className="border border-gray-300" />
-        </div>
-        <div>
-          <h3 className="text-center mb-2">Pixelated Image</h3>
-          <canvas ref={canvasRef} className="border border-gray-300" />
-        </div>
-      </div>
-
-      <div className="flex space-x-2 justify-center mt-4">
-        <Button onClick={() => exportImage("png")} disabled={!image}>
-          <Download className="mr-2 h-4 w-4" /> Export PNG
-        </Button>
-        <Button onClick={() => exportImage("gif")} disabled={!image}>
-          <Download className="mr-2 h-4 w-4" /> Export GIF
-        </Button>
-        <Button onClick={copyToClipboard} disabled={!image}>
-          <Clipboard className="mr-2 h-4 w-4" /> Copy to Clipboard
-        </Button>
-        <Button onClick={copySvgTextToClipboard} disabled={!image}>
-          <Clipboard className="mr-2 h-4 w-4" /> Copy SVG to Clipboard
-        </Button>
-      </div>
     </div>
   );
 };
