@@ -15,13 +15,20 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 
 const defaultColors: string[] = [
-  "#F53698",
-  "#F0D105",
-  "#E67802",
-  "#F4AF89",
-  "#03E01D",
-  "#03E0DA",
-  "#0479C3",
+  "#F53636",
+  "#D59C15",
+  "#A97F89",
+  "#3B6272",
+  "#40B3CE",
+  "#314353",
+  "#FAC0BD",
+  "#68525E",
+  "#88785E",
+  "#FEE5B0",
+  "#E4E4DB",
+  "#EEECD3",
+  "#75A0AA",
+  "#FFFFFF",
 ];
 
 export const isBrowser = (): boolean => {
