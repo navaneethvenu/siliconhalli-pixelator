@@ -113,8 +113,12 @@ const PixelArtGenerator: React.FC = () => {
 
       // Create pixelated version on main canvas
       ctx.imageSmoothingEnabled = false;
-      const scaledWidth = Math.floor(artboardWidth / pixelSize);
-      const scaledHeight = Math.floor(artboardHeight / pixelSize);
+      const scaledWidth =
+        pixelSize != 0 ? Math.floor(artboardWidth / pixelSize) : artboardWidth;
+      const scaledHeight =
+        pixelSize != 0
+          ? Math.floor(artboardHeight / pixelSize)
+          : artboardHeight;
 
       // Use an offscreen canvas for the intermediate step
       const offscreenCanvas = document.createElement("canvas");
@@ -447,7 +451,7 @@ const PixelArtGenerator: React.FC = () => {
           <Slider
             value={[pixelSize]}
             onValueChange={(value) => setPixelSize(value[0])}
-            min={1}
+            min={0}
             max={50}
             step={1}
           />
