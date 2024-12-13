@@ -249,6 +249,7 @@ const PixelArtGenerator: React.FC = () => {
 
   // Function to create an SVG from the pixel data on the canvas
   const createSvgFromCanvas = () => {
+    const finalPixelSize = pixelSize != 0 ? pixelSize : 1;
     const canvas = canvasRef.current;
     if (!canvas) return null;
 
@@ -261,8 +262,8 @@ const PixelArtGenerator: React.FC = () => {
     // Start SVG string with appropriate dimensions
     let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">`;
 
-    for (let y = 0; y < height; y += pixelSize) {
-      for (let x = 0; x < width; x += pixelSize) {
+    for (let y = 0; y < height; y += finalPixelSize) {
+      for (let x = 0; x < width; x += finalPixelSize) {
         const index = (y * width + x) * 4;
         const r = imageData.data[index];
         const g = imageData.data[index + 1];
@@ -277,12 +278,14 @@ const PixelArtGenerator: React.FC = () => {
           : rgbToHex(r, g, b);
 
         // Add each "pixel" as an SVG <rect> element
-        svg += `<rect x="${x}" y="${y}" width="${pixelSize}" height="${pixelSize}" fill="${hexColor}" />`;
+        svg += `<rect x="${x}" y="${y}" width="${finalPixelSize}" height="${finalPixelSize}" fill="${hexColor}" />`;
       }
     }
 
     // Close the SVG tag
     svg += `</svg>`;
+
+    console.log(svg);
 
     return svg;
   };
